@@ -11,6 +11,7 @@ async function scrapeProperties(propertyType, pageNumber, fileName) {
     try {
         await page.goto(url, { waitUntil: 'networkidle2' });
 
+        // Extract basic property data from the page
         const properties = await page.evaluate(() => {
             const list = document.querySelectorAll('.container-fluid');
             const basicData = [];
@@ -26,9 +27,12 @@ async function scrapeProperties(propertyType, pageNumber, fileName) {
             return basicData.filter(prop => Object.values(prop).every(value => value !== null));
         });
 
+        //Iterate over each property to extract additional data (description, images, flyer)
         for (const property of properties) {
+            // Navigate to the individual property page to get more details
             await page.goto(property.url, { waitUntil: 'networkidle2' });
 
+            // Extract additional data from the property page
             const additionalData = await page.evaluate(() => {
                 const description = document.querySelector('#home')?.innerText.trim() || null;
                 const images = Array.from(document.querySelectorAll('.thumb img')).map((img) => img.src);
@@ -36,9 +40,10 @@ async function scrapeProperties(propertyType, pageNumber, fileName) {
                 return { description, images, flyer };
             });
 
+            // Merge the additional data with the basic property data
             Object.assign(property, additionalData);
         }
-
+        // Save the final list of properties with all extracted data to a JSON file
         fs.writeFileSync(fileName, JSON.stringify(properties, null, 2), 'utf-8');
         console.log(`Data has been saved to ${fileName}`);
     } catch (error) {
